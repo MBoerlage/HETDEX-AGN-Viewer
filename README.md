@@ -12,6 +12,21 @@ Features:
 
 ---
 
+![All Spectra tab](screenshots/HETDEX_AGN_Viewer1.png)
+*Tab 1 — All Spectra: filter the full AGN catalog by brightness, redshift, and sky position, then click any object to instantly display its spectrum. The flux (blue line) is shown with a 1σ shaded error band across the HETDEX bandpass (3470–5540 Å). Here a bright broad-line AGN at z = 0.40 shows a prominent emission feature.*
+
+---
+
+![Sky Map tab](screenshots/HETDEX_AGN_Viewer2.png)
+*Tab 2 — Sky Map: on-sky distribution of all 15,940 HDR4 AGN across the HETDEX survey fields, coloured by field (dex-spring in green dominates the spring strip at Dec ≈ 50–57°; SSA22 in teal at lower right; COSMOS in orange; NEP at upper left). Gold stars mark AGN positionally cross-matched with the NGC/IC catalog.*
+
+---
+
+![Mag vs z tab](screenshots/HETDEX_AGN_Viewer3.png)
+*Tab 3 — Mag vs z: magnitude–redshift diagram for all AGN with photometry, coloured by survey field. Brighter objects appear at the top (y-axis inverted, astronomical convention). The diagonal envelope traces the survey's photometric depth limit, and the spread reflects the intrinsic AGN luminosity function.*
+
+---
+
 ## ⚠️ Data files required
 
 **The FITS data files are not included in this repository.** They must be downloaded separately from the HETDEX public data release page:
