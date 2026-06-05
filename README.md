@@ -156,4 +156,5 @@ If you use HETDEX data, please include the following acknowledgement:
 
 ---
 
-*Built by the HAS Data Special Interest Group.*
+*Built by the Houston Astronomical Society — Data Special Interest Group.*  
+https://astronomyhouston.org/
