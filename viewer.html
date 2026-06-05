@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HAS DATA SIG HETDEX Viewer</title>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js" charset="utf-8"></script>
+<style>
+/* ── Reset & base ──────────────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#0e0e22;color:#c8cde4;
+     height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Header ────────────────────────────────────────────────────────────────── */
+header{background:#161630;padding:8px 18px;border-bottom:1px solid #222248;
+       display:flex;align-items:center;gap:12px;flex-shrink:0}
+header h1{font-size:.95rem;color:#9aadcf;font-weight:600;letter-spacing:.04em}
+#stats{font-size:.73rem;color:#576080;margin-left:auto}
+
+/* ── Dataset selector ──────────────────────────────────────────────────────── */
+#ds-selector{display:flex;gap:4px;align-items:center;margin-left:16px}
+.dsBtn{background:#0e0e22;border:1px solid #2e2e5a;border-radius:3px;
+       padding:3px 10px;cursor:pointer;color:#576080;font-size:.75rem;
+       font-family:inherit;transition:all .15s;white-space:nowrap}
+.dsBtn:hover{color:#9aadcf;border-color:#4a4a7a}
+.dsBtn.active{background:#1a2550;border-color:#6284d8;color:#c8cde4;font-weight:600}
+
+/* ── Tab nav ───────────────────────────────────────────────────────────────── */
+nav{background:#111128;border-bottom:1px solid #222248;display:flex;
+    align-items:stretch;flex-shrink:0;padding:0 12px;gap:2px}
+.tabBtn{background:none;border:none;border-bottom:2px solid transparent;
+        padding:7px 16px;cursor:pointer;color:#576080;font-size:.82rem;
+        font-family:inherit;transition:color .15s,border-color .15s;margin-bottom:-1px}
+.tabBtn:hover{color:#9aadcf}
+.tabBtn.active{color:#9aadcf;border-bottom-color:#6284d8}
+
+/* ── Panels ────────────────────────────────────────────────────────────────── */
+.panel{flex:1;overflow:hidden;display:none;flex-direction:column}
+.panel.visible{display:flex}
+
+/* ── Shared sidebar + spec-main split ─────────────────────────────────────── */
+.split{display:flex;flex:1;overflow:hidden}
+aside{width:230px;min-width:170px;background:#161630;border-right:1px solid #222248;
+      display:flex;flex-direction:column;flex-shrink:0}
+.sq{padding:8px 8px 6px}
+.sq input{width:100%;padding:5px 9px;background:#0e0e22;border:1px solid #2e2e5a;
+          border-radius:4px;color:#c8cde4;font-size:.79rem;outline:none;transition:border .15s}
+.sq input:focus{border-color:#6284d8}
+.obj-list{flex:1;overflow-y:auto}
+.obj-list::-webkit-scrollbar{width:4px}
+.obj-list::-webkit-scrollbar-thumb{background:#222248;border-radius:2px}
+.oi{padding:7px 11px;cursor:pointer;border-bottom:1px solid #1a1a3a;
+    transition:background .1s;user-select:none}
+.oi:hover{background:#1c1c3e}
+.oi.sel{background:#1a2550;border-left:3px solid #6284d8;padding-left:8px}
+.oi strong{color:#b8c8e8;font-size:.81rem}
+.oi .sub{color:#576080;font-size:.72rem;margin-top:2px}
+.no-res{padding:14px;color:#576080;font-size:.79rem;text-align:center}
+
+/* ── Spec main area ────────────────────────────────────────────────────────── */
+.smain{flex:1;display:flex;flex-direction:column;padding:12px;gap:10px;
+       overflow:hidden;min-width:0}
+.info{background:#161630;border:1px solid #222248;border-radius:5px;
+      padding:9px 14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;
+      font-size:.79rem;min-height:44px;flex-shrink:0}
+.info .f label{color:#576080;font-size:.68rem;display:block;
+               text-transform:uppercase;letter-spacing:.04em}
+.info .f span{color:#c8cde4;font-weight:600}
+.info .ph{color:#3a3a60;font-style:italic}
+.cdiv{flex:1;background:#161630;border:1px solid #222248;border-radius:5px;
+      overflow:hidden;min-height:0}
+
+/* ── Tab 1: filter bar ─────────────────────────────────────────────────────── */
+.fbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;
+      padding:7px 14px;background:#111128;border-bottom:1px solid #222248;
+      flex-shrink:0;font-size:.78rem}
+.fg{display:flex;align-items:center;gap:4px;color:#576080}
+.fg label{white-space:nowrap}
+.fg input[type=number]{width:62px;padding:3px 5px;background:#0e0e22;
+   border:1px solid #2e2e5a;border-radius:3px;color:#c8cde4;font-size:.78rem;
+   -moz-appearance:textfield}
+.fg input[type=number]::-webkit-inner-spin-button{opacity:.4}
+.fg input[type=number]:focus{outline:none;border-color:#6284d8}
+.fg.check label{cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;color:#576080}
+.fsep{color:#2e2e5a;font-size:1.1rem;padding:0 2px}
+.freset{margin-left:auto;background:#1a2550;border:1px solid #2e2e5a;
+        border-radius:3px;color:#9aadcf;font-size:.75rem;padding:3px 9px;
+        cursor:pointer;transition:background .15s}
+.freset:hover{background:#223060}
+.fcount{padding:3px 14px 4px;font-size:.73rem;color:#576080;
+        background:#0e0e22;border-bottom:1px solid #1a1a3a;flex-shrink:0}
+
+/* ── Tab 2 & 3: full-panel charts ─────────────────────────────────────────── */
+.fchart{flex:1;padding:12px;overflow:hidden}
+.fchart > div{width:100%;height:100%;background:#161630;border:1px solid #222248;
+              border-radius:5px;overflow:hidden}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>HAS DATA SIG HETDEX Viewer</h1>
+  <div id="ds-selector"></div>
+  <span id="stats">Loading...</span>
+</header>
+
+<nav>
+  <button class="tabBtn active" onclick="switchTab('spectra',this)">All Spectra</button>
+  <button class="tabBtn"        onclick="switchTab('skymap',this)">Sky Map</button>
+  <button class="tabBtn"        onclick="switchTab('magz',this)">Mag vs z</button>
+</nav>
+
+<!-- ── Tab 1: All Spectra ──────────────────────────────────────────────────── -->
+<div id="panel-spectra" class="panel visible">
+  <div class="fbar">
+    <div class="fg"><label id="mag-label">mag &#8804;</label>
+      <input type="number" id="f-r" value="22" step="0.5" min="0" max="40" oninput="applyFilters()">
+    </div>
+    <div class="fg check">
+      <label><input type="checkbox" id="f-rnan" onchange="applyFilters()"> incl. no-phot.</label>
+    </div>
+    <div class="fsep">|</div>
+    <div class="fg"><label>z:</label>
+      <input type="number" id="f-zlo" value="0.18" step="0.1" min="0" oninput="applyFilters()">
+      <span>&#8211;</span>
+      <input type="number" id="f-zhi" value="4.17" step="0.1" max="10" oninput="applyFilters()">
+    </div>
+    <div class="fsep">|</div>
+    <div class="fg"><label>RA&#176;:</label>
+      <input type="number" id="f-ralo" value="0" step="5" min="0" max="360" oninput="applyFilters()">
+      <span>&#8211;</span>
+      <input type="number" id="f-rahi" value="360" step="5" min="0" max="360" oninput="applyFilters()">
+    </div>
+    <div class="fsep">|</div>
+    <div class="fg"><label>Dec&#176;:</label>
+      <input type="number" id="f-delo" value="-90" step="5" min="-90" max="90" oninput="applyFilters()">
+      <span>&#8211;</span>
+      <input type="number" id="f-dehi" value="90" step="5" min="-90" max="90" oninput="applyFilters()">
+    </div>
+    <button class="freset" onclick="resetFilters()">Reset</button>
+  </div>
+  <div class="fcount" id="spec-count"></div>
+  <div class="split">
+    <aside>
+      <div class="sq">
+        <input id="spec-q" type="text" placeholder="Search AGN ID or field..." oninput="applyFilters()">
+      </div>
+      <div class="obj-list" id="spec-list"></div>
+    </aside>
+    <div class="smain">
+      <div class="info" id="spec-info"><span class="ph">Select an AGN from the list</span></div>
+      <div class="cdiv" id="spec-chart"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 2: Sky Map ──────────────────────────────────────────────────────── -->
+<div id="panel-skymap" class="panel">
+  <div class="fchart"><div id="skymap-div"></div></div>
+</div>
+
+<!-- ── Tab 3: Mag vs z ────────────────────────────────────────────────────── -->
+<div id="panel-magz" class="panel">
+  <div class="fchart"><div id="magz-div"></div></div>
+</div>
+
+
+<script>
+// ── Global data (fetched from Flask API) ─────────────────────────────────────
+let WAVE = [];
+let META = [];
+let NGC  = {objects:[]};
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentDS = null;   // active dataset key e.g. 'hdr3' / 'hdr4'
+let DSInfo    = {};     // {hdr3:{label,mag_label}, hdr4:{...}}
+let tabDone   = {skymap:false, magz:false};
+let specSel   = null;
+let filtered  = [];
+
+// ── Plotly style helpers ─────────────────────────────────────────────────────
+const BGCOLOR = '#161630';
+const PLOTBG  = '#0e0e22';
+const AXIS    = {color:'#576080',gridcolor:'#1a1a3a',zerolinecolor:'#222248',tickcolor:'#576080'};
+const PCONFIG = {responsive:true,displaylogo:false};
+const FCOLOR  = {
+  'cosmos':'#ff9f40','dex-fall':'#6baed6','dex-spring':'#74c476',
+  'egs':'#e97451','goods-n':'#b39ade','nep':'#fdae6b','other':'#888'
+};
+
+function baseLayout(extra) {
+  return Object.assign({
+    paper_bgcolor:BGCOLOR, plot_bgcolor:PLOTBG,
+    font:{color:'#9aadcf',size:11.5},
+    legend:{bgcolor:'rgba(22,22,48,0.85)',bordercolor:'#222248',borderwidth:1},
+  }, extra);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    // 1. Discover available datasets
+    const dsRes = await fetch('/api/datasets').then(r => r.json());
+    DSInfo    = dsRes.info;
+    currentDS = dsRes.default;
+    buildDSSelector(dsRes.available, currentDS, DSInfo);
+
+    // 2. Load metadata for the default dataset and NGC matches in parallel
+    const [mRes, nRes] = await Promise.all([
+      fetch(`/api/meta?ds=${currentDS}`).then(r => r.json()),
+      fetch('/api/ngc').then(r => r.json()),
+    ]);
+    WAVE = mRes.wavelength;
+    META = mRes.agn;
+    NGC  = nRes;
+    updateStats(mRes.n_total);
+    updateMagLabel();
+  } catch(e) {
+    document.getElementById('stats').textContent = 'Error: ' + e.message;
+    return;
+  }
+
+  Plotly.newPlot('spec-chart', [], emptySpecLayout(), PCONFIG);
+
+  applyFilters();
+}
+
+// ── Dataset selector ─────────────────────────────────────────────────────────
+function buildDSSelector(available, active, info) {
+  const el = document.getElementById('ds-selector');
+  if (available.length < 2) { el.style.display = 'none'; return; }
+  el.innerHTML = available.map(k =>
+    `<button class="dsBtn${k===active?' active':''}" data-ds="${k}"
+             onclick="setDataset('${k}')">${info[k].label}</button>`
+  ).join('');
+}
+
+async function setDataset(key) {
+  if (key === currentDS) return;
+  currentDS = key;
+
+  // Update selector highlight
+  document.querySelectorAll('.dsBtn').forEach(b =>
+    b.classList.toggle('active', b.dataset.ds === key)
+  );
+  updateMagLabel();
+
+  // Reset state
+  specSel  = null;
+  filtered = [];
+  document.getElementById('spec-info').innerHTML = '<span class="ph">Select an AGN from the list</span>';
+  Plotly.react('spec-chart', [], emptySpecLayout(), PCONFIG);
+
+  // Fetch new metadata
+  document.getElementById('stats').textContent = 'Loading...';
+  const mRes = await fetch(`/api/meta?ds=${currentDS}`).then(r => r.json());
+  WAVE = mRes.wavelength;
+  META = mRes.agn;
+  updateStats(mRes.n_total);
+
+  // Re-render everything that's already visible
+  applyFilters();
+  if (tabDone.skymap) renderSkyMap();
+  if (tabDone.magz)   renderMagZ();
+}
+
+function updateStats(nTotal) {
+  const nm = NGC.objects?.length ?? 0;
+  document.getElementById('stats').textContent =
+    `${nTotal} AGN  |  ${nm} NGC/IC match${nm!==1?'es':''}`;
+}
+
+function updateMagLabel() {
+  const label = DSInfo[currentDS]?.mag_label ?? 'mag';
+  document.getElementById('mag-label').textContent = label + ' ≤';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(el => el.classList.remove('visible'));
+  document.getElementById('panel-'+name).classList.add('visible');
+  document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (!tabDone[name]) {
+    tabDone[name] = true;
+    if (name==='skymap') renderSkyMap();
+    if (name==='magz')   renderMagZ();
+  }
+  // Allow Plotly to resize when the panel becomes visible
+  requestAnimationFrame(() => {
+    const ids = {spectra:'spec-chart',skymap:'skymap-div',magz:'magz-div'};
+    if (ids[name]) Plotly.Plots.resize(document.getElementById(ids[name]));
+  });
+}
+
+// ── Tab 1: All AGN Spectra ────────────────────────────────────────────────────
+
+function resetFilters() {
+  document.getElementById('f-r').value   = 22;
+  document.getElementById('f-rnan').checked = false;
+  document.getElementById('f-zlo').value = 0.18;
+  document.getElementById('f-zhi').value = 4.17;
+  document.getElementById('f-ralo').value = 0;
+  document.getElementById('f-rahi').value = 360;
+  document.getElementById('f-delo').value = -90;
+  document.getElementById('f-dehi').value = 90;
+  document.getElementById('spec-q').value = '';
+  applyFilters();
+}
+
+function applyFilters() {
+  const rMax  = parseFloat(document.getElementById('f-r').value)    || 99;
+  const rNan  = document.getElementById('f-rnan').checked;
+  const zLo   = parseFloat(document.getElementById('f-zlo').value)  || 0;
+  const zHi   = parseFloat(document.getElementById('f-zhi').value)  || 99;
+  const raLo  = parseFloat(document.getElementById('f-ralo').value) || 0;
+  const raHi  = parseFloat(document.getElementById('f-rahi').value) || 360;
+  const deLo  = parseFloat(document.getElementById('f-delo').value) || -90;
+  const deHi  = parseFloat(document.getElementById('f-dehi').value) || 90;
+  const q     = document.getElementById('spec-q').value.toLowerCase().trim();
+
+  filtered = META.filter(o => {
+    const magOk = (o.mag !== null && o.mag <= rMax) || (rNan && o.mag === null);
+    const zOk   = o.z >= zLo && o.z <= zHi;
+    const raOk  = o.ra >= raLo && o.ra <= raHi;
+    const deOk  = o.dec >= deLo && o.dec <= deHi;
+    const qOk   = !q || String(o.agnid).includes(q) || o.field.toLowerCase().includes(q);
+    return magOk && zOk && raOk && deOk && qOk;
+  });
+
+  // Sort: brightest (lowest mag) first, null at end, then by z
+  filtered.sort((a,b) => {
+    if (a.mag===null && b.mag===null) return a.z - b.z;
+    if (a.mag===null) return  1;
+    if (b.mag===null) return -1;
+    return a.mag - b.mag;
+  });
+
+  const MAX = 200;
+  const shown = filtered.slice(0, MAX);
+  const tail  = filtered.length > MAX ? `, showing brightest ${MAX}` : '';
+  document.getElementById('spec-count').textContent =
+    `${shown.length} of ${filtered.length} matching AGN${tail} — sorted by r-band brightness`;
+
+  renderSpecList(shown);
+}
+
+function renderSpecList(list) {
+  const el = document.getElementById('spec-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="no-res">No AGN match these filters</div>';
+    return;
+  }
+  el.innerHTML = list.map(o => {
+    const r   = o.mag !== null ? o.mag.toFixed(2) : '—';
+    const cls = 'oi' + (o.agnid === specSel ? ' sel' : '');
+    return `<div class="${cls}" onclick="pickAGN(${o.agnid})">` +
+           `<strong>AGN ${o.agnid}</strong>` +
+           `<div class="sub">z=${o.z.toFixed(3)} | r=${r} | ${o.field}</div>` +
+           `</div>`;
+  }).join('');
+}
+
+async function pickAGN(agnid) {
+  specSel = agnid;
+  renderSpecList(filtered.slice(0, 200));
+
+  const o = META.find(m => m.agnid === agnid);
+  if (o) showMetaInfo(o, 'spec-info');
+
+  Plotly.react('spec-chart', [], emptySpecLayout('Loading spectrum…'), PCONFIG);
+
+  const res  = await fetch(`/api/spectrum/${agnid}?ds=${currentDS}`);
+  const spec = await res.json();
+  plotSpectrum('spec-chart', spec.flux, spec.error, `AGN ${agnid}`);
+}
+
+function showMetaInfo(o, divId) {
+  const rows = [
+    ['AGN ID',   o.agnid],
+    ['z',        o.z.toFixed(5)],
+    [DSInfo[currentDS]?.mag_label ?? 'mag', o.mag !== null ? o.mag.toFixed(3)+' mag' : '—'],
+    ['LyA SNR',  o.snr    !== null ? o.snr.toFixed(1)           : '—'],
+    ['Field',    o.field],
+    ['RA',       o.ra.toFixed(5)+'°'],
+    ['Dec',      o.dec.toFixed(5)+'°'],
+    ['z-flag',   o.zflag],
+  ];
+  document.getElementById(divId).innerHTML =
+    rows.map(([l,v]) => `<div class="f"><label>${l}</label><span>${v}</span></div>`).join('');
+}
+
+function emptySpecLayout(msg) {
+  return baseLayout({
+    margin:{l:88,r:18,t:18,b:56},
+    xaxis:{title:'Observed wavelength (Å)',...AXIS},
+    yaxis:{title:'fλ (10⁻¹⁷ erg cm⁻² s⁻¹ Å⁻¹)',...AXIS},
+    hovermode:'x unified', showlegend:false,
+    annotations:[{text: msg || 'Select an AGN from the list',
+                  xref:'paper',yref:'paper',x:.5,y:.5,
+                  showarrow:false,font:{size:13,color:'#3a3a60'}}],
+  });
+}
+
+// ── Shared spectrum plotter ───────────────────────────────────────────────────
+function plotSpectrum(divId, flux, err, title) {
+  const Wr  = WAVE.slice().reverse();
+  const up  = flux.map((f,i) => f!==null&&err[i]!==null ? f+err[i] : null);
+  const lo  = flux.map((f,i) => f!==null&&err[i]!==null ? f-err[i] : null);
+
+  const traces = [
+    { x:[...WAVE,...Wr], y:[...up,...lo.slice().reverse()],
+      fill:'toself', fillcolor:'rgba(98,132,216,0.15)',
+      line:{color:'transparent'}, hoverinfo:'skip', showlegend:false, type:'scatter' },
+    { x:WAVE, y:flux, mode:'lines', type:'scatter',
+      line:{color:'#6284d8',width:1.4}, name:title,
+      hovertemplate:'%{x:.0f} Å<br>%{y:.4f}<extra></extra>' },
+  ];
+
+  Plotly.react(divId, traces, baseLayout({
+    margin:{l:88,r:18,t:18,b:56},
+    xaxis:{title:'Observed wavelength (Å)',...AXIS},
+    yaxis:{title:'fλ (10⁻¹⁷ erg cm⁻² s⁻¹ Å⁻¹)',...AXIS},
+    hovermode:'x unified', showlegend:false,
+  }), PCONFIG);
+}
+
+// ── Tab 2: Sky Map ────────────────────────────────────────────────────────────
+function renderSkyMap() {
+  const byField = {};
+  META.forEach((o,i) => { (byField[o.field] = byField[o.field]||[]).push(i); });
+
+  const traces = Object.keys(byField).sort().map(field => {
+    const idxs = byField[field];
+    return {
+      x: idxs.map(i => META[i].ra),
+      y: idxs.map(i => META[i].dec),
+      customdata: idxs.map(i => [META[i].agnid, META[i].z.toFixed(3)]),
+      mode:'markers', type:'scatter', name:field,
+      marker:{size:4, color:FCOLOR[field]||'#aaa', opacity:0.7},
+      hovertemplate:'AGN %{customdata[0]}<br>z=%{customdata[1]}<br>RA %{x:.4f}°<br>Dec %{y:.4f}°<extra>'+field+'</extra>',
+    };
+  });
+
+  if (NGC.objects?.length) {
+    traces.push({
+      x: NGC.objects.map(o=>o.ra), y: NGC.objects.map(o=>o.dec),
+      text: NGC.objects.map(o=>o.name),
+      mode:'markers+text', type:'scatter', name:'NGC/IC match',
+      marker:{size:12,color:'#f5d76e',symbol:'star',line:{color:'#b8940a',width:1}},
+      textposition:'top center', textfont:{color:'#f5d76e',size:10},
+      hovertemplate:'%{text}<br>RA %{x:.4f}°<br>Dec %{y:.4f}°<extra>NGC/IC</extra>',
+    });
+  }
+
+  Plotly.newPlot('skymap-div', traces, baseLayout({
+    xaxis:{title:'RA (deg)', autorange:'reversed', ...AXIS},
+    yaxis:{title:'Dec (deg)', ...AXIS},
+    hovermode:'closest', margin:{l:70,r:20,t:20,b:60},
+  }), PCONFIG);
+}
+
+// ── Tab 3: Mag vs z ───────────────────────────────────────────────────────────
+function renderMagZ() {
+  const byField = {};
+  META.forEach((o,i) => {
+    if (o.mag !== null) (byField[o.field] = byField[o.field]||[]).push(i);
+  });
+
+  const traces = Object.keys(byField).sort().map(field => {
+    const idxs = byField[field];
+    return {
+      x: idxs.map(i => META[i].z),
+      y: idxs.map(i => META[i].mag),
+      customdata: idxs.map(i => [META[i].agnid, META[i].field]),
+      mode:'markers', type:'scatter', name:field,
+      marker:{size:4, color:FCOLOR[field]||'#aaa', opacity:0.65},
+      hovertemplate:'AGN %{customdata[0]}<br>z=%{x:.3f}<br>r=%{y:.2f} mag<extra>%{customdata[1]}</extra>',
+    };
+  });
+
+  // NGC matches on top
+  if (NGC.objects?.length) {
+    const ngcWithMag = NGC.objects.map(o => {
+      const m = META.find(mm => mm.agnid === o.agnid);
+      return m && m.mag !== null ? {name:o.name, z:m.z, r:m.mag} : null;
+    }).filter(Boolean);
+    if (ngcWithMag.length) {
+      traces.push({
+        x:ngcWithMag.map(o=>o.z), y:ngcWithMag.map(o=>o.r),
+        text:ngcWithMag.map(o=>o.name),
+        mode:'markers+text', type:'scatter', name:'NGC/IC match',
+        marker:{size:12,color:'#f5d76e',symbol:'star',line:{color:'#b8940a',width:1}},
+        textposition:'top center', textfont:{color:'#f5d76e',size:10},
+        hovertemplate:'%{text}<br>z=%{x:.3f}<br>r=%{y:.2f} mag<extra>NGC/IC</extra>',
+      });
+    }
+  }
+
+  Plotly.newPlot('magz-div', traces, baseLayout({
+    xaxis:{title:'Redshift (z)', ...AXIS},
+    yaxis:{title:(DSInfo[currentDS]?.mag_label??'mag')+' magnitude', autorange:'reversed', ...AXIS},
+    hovermode:'closest', margin:{l:70,r:20,t:20,b:60},
+  }), PCONFIG);
+}
+
+// ── Go ────────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

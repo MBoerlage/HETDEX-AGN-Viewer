@@ -1,0 +1,27 @@
+# ── HETDEX FITS data files ────────────────────────────────────────────────────
+# Not included in this repository.
+# Download from:  https://hetdex.org/data-results/#pdr1
+hetdex_agn.fits
+hetdex_agn_hdr4.fits
+
+# ── Generated at runtime ──────────────────────────────────────────────────────
+# Recreated by running:  python match_ngc.py
+ngc_matched.json
+
+# ── Old standalone viewer (superseded by server.py + viewer.html) ─────────────
+ngc_viewer.html
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── Claude Code local settings ────────────────────────────────────────────────
+.claude/
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
